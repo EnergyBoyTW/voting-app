@@ -6,19 +6,20 @@ function ResultPage({ name, roomId, isHost }) {
   const [results, setResults] = useState([]);
   const [average, setAverage] = useState(null);
   const navigate = useNavigate();
-  const { roomId: urlRoomId } = useParams(); // 從 URL 讀取房號
+  const { roomId: urlRoomId } = useParams(); // Get room ID from URL
 
   const realRoomId = roomId || urlRoomId;
   const socketRef = useRef(null);
   const reconnectTimer = useRef(null);
 
   const connectWebSocket = () => {
-    console.log("建立ResultPage WebSocket連線：", realRoomId);
-    const ws = new WebSocket(`ws://localhost:8000/ws/${realRoomId}`);
+    const wsUrl = `wss://voting-app-lrrg.onrender.com/ws/${realRoomId}`;
+    console.log("Establishing ResultPage WebSocket connection:", realRoomId);
+    const ws = new WebSocket(wsUrl);
     socketRef.current = ws;
 
     ws.onopen = () => {
-      console.log("ResultPage WebSocket連線成功！");
+      console.log("ResultPage WebSocket connected!");
     };
 
     ws.onmessage = (event) => {
@@ -26,22 +27,22 @@ function ResultPage({ name, roomId, isHost }) {
         const message = JSON.parse(event.data);
 
         if (message.action === "goto_vote") {
-          console.log("收到 goto_vote，跳回投票頁！");
+          console.log("Received 'goto_vote', navigating back to VotePage!");
           navigate(`/room/${realRoomId}/vote`);
         }
       } catch (error) {
-        console.error("WebSocket 訊息解析失敗", error);
+        console.error("Failed to parse WebSocket message", error);
       }
     };
 
     ws.onerror = (error) => {
-      console.error("ResultPage WebSocket錯誤", error);
+      console.error("ResultPage WebSocket error", error);
     };
 
     ws.onclose = () => {
-      console.warn("ResultPage WebSocket 連線關閉，1秒後重試...");
+      console.warn("ResultPage WebSocket closed, retrying in 1 second...");
       reconnectTimer.current = setTimeout(() => {
-        connectWebSocket(); // 1秒後重連
+        connectWebSocket();
       }, 1000);
     };
   };
@@ -50,7 +51,7 @@ function ResultPage({ name, roomId, isHost }) {
     connectWebSocket();
 
     return () => {
-      console.log("清理ResultPage WebSocket連線");
+      console.log("Cleaning up ResultPage WebSocket connection");
       if (socketRef.current) {
         socketRef.current.close();
         socketRef.current = null;
@@ -68,7 +69,7 @@ function ResultPage({ name, roomId, isHost }) {
         setResults(response.data.results);
         setAverage(response.data.average);
       } catch (error) {
-        console.error("取得結果失敗", error);
+        console.error("Failed to fetch results", error);
       }
     };
 
@@ -78,22 +79,21 @@ function ResultPage({ name, roomId, isHost }) {
   const handleRestart = async () => {
     try {
       await restart(realRoomId);
-      console.log("重新開始成功");
-      // ❗ 這裡不需要自己 navigate，因為 server會broadcast "goto_vote" ，前端自動跳
+      console.log("Restart successful");
+      // ❗ No need to manually navigate; server will broadcast "goto_vote"
     } catch (error) {
-      console.error("重新開始失敗", error);
-      alert("重新開始失敗！");
+      console.error("Failed to restart", error);
+      alert("Failed to restart!");
     }
   };
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-gray-100 p-4">
       <div className="bg-white p-6 rounded-2xl shadow-lg w-full max-w-md">
-        <h1 className="text-2xl font-bold mb-6 text-center">投票結果</h1>
+        <h1 className="text-2xl font-bold mb-6 text-center">Voting Results</h1>
 
-        {/* 玩家分數列表 */}
+        {/* Player scores list */}
         <div className="mb-6">
-          <h2 className="text-lg font-semibold mb-4">玩家分數：</h2>
           <ul className="space-y-2">
             {results.map((player) => (
               <li
@@ -102,28 +102,28 @@ function ResultPage({ name, roomId, isHost }) {
               >
                 <span>{player.name}</span>
                 <span className="font-bold">
-                  {player.score !== null ? player.score : "未投票"}
+                  {player.score !== null ? player.score : "No vote"}
                 </span>
               </li>
             ))}
           </ul>
         </div>
 
-        {/* 平均分數 */}
+        {/* Average score */}
         <div className="mb-6 text-center">
-          <h2 className="text-xl font-bold">平均分數：</h2>
+          <h2 className="text-xl font-bold">Average Score:</h2>
           <div className="text-3xl text-blue-500 font-extrabold mt-2">
-            {average !== null ? average.toFixed(2) : "尚未計算"}
+            {average !== null ? average.toFixed(2) : "Not calculated yet"}
           </div>
         </div>
 
-        {/* 房主才能看到重新開始按鈕 */}
+        {/* Host-only restart button */}
         {isHost && (
           <button
             onClick={handleRestart}
             className="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-lg transition-all"
           >
-            重新開始新一輪
+            Restart New Round
           </button>
         )}
       </div>

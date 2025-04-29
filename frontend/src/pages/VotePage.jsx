@@ -14,15 +14,16 @@ function VotePage({ name, roomId, isHost }) {
   const socketRef = useRef(null);
   const reconnectTimer = useRef(null);
 
-  const scores = [1, 2, 3, 5, 8, 13];
+  const scores = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
 
   const connectWebSocket = () => {
-    console.log("嘗試建立 WebSocket 連線:", realRoomId);
-    const ws = new WebSocket(`ws://localhost:8000/ws/${realRoomId}`);
+    const wsUrl = `wss://voting-app-lrrg.onrender.com/ws/${realRoomId}`;
+    console.log("Attempting to establish WebSocket connection:", realRoomId);
+    const ws = new WebSocket(wsUrl);
     socketRef.current = ws;
 
     ws.onopen = () => {
-      console.log("WebSocket 連線成功！");
+      console.log("WebSocket connection established!");
       refreshResults();
     };
 
@@ -31,28 +32,28 @@ function VotePage({ name, roomId, isHost }) {
         const message = JSON.parse(event.data);
 
         if (message.action === "refresh") {
-          console.log("收到 refresh，刷新結果！");
+          console.log("Received 'refresh', updating results!");
           refreshResults();
         } else if (message.action === "goto_result") {
-          console.log("收到 goto_result，跳轉到結果頁！");
+          console.log("Received 'goto_result', navigating to result page!");
           navigate(`/room/${realRoomId}/result`);
         } else if (message.action === "goto_vote") {
-          console.log("收到 goto_vote，跳回投票頁！");
+          console.log("Received 'goto_vote', navigating back to vote page!");
           navigate(`/room/${realRoomId}/vote`);
         }
       } catch (error) {
-        console.error("WebSocket 訊息解析失敗", error);
+        console.error("Failed to parse WebSocket message", error);
       }
     };
 
     ws.onerror = (error) => {
-      console.error("WebSocket錯誤", error);
+      console.error("WebSocket error", error);
     };
 
     ws.onclose = () => {
-      console.warn("WebSocket 連線關閉，1秒後重試...");
+      console.warn("WebSocket connection closed, retrying in 1 second...");
       reconnectTimer.current = setTimeout(() => {
-        connectWebSocket(); // 1秒後重連
+        connectWebSocket();
       }, 1000);
     };
   };
@@ -61,7 +62,7 @@ function VotePage({ name, roomId, isHost }) {
     connectWebSocket();
 
     return () => {
-      console.log("清理 WebSocket 連線");
+      console.log("Cleaning up WebSocket connection");
       if (socketRef.current) {
         socketRef.current.close();
         socketRef.current = null;
@@ -79,7 +80,7 @@ function VotePage({ name, roomId, isHost }) {
       setLocked(response.data.locked);
       setAverage(response.data.average);
     } catch (error) {
-      console.error("刷新結果失敗", error);
+      console.error("Failed to refresh results", error);
     }
   };
 
@@ -87,34 +88,34 @@ function VotePage({ name, roomId, isHost }) {
     setSelectedScore(score);
     try {
       await vote(realRoomId, name, score);
-      console.log(`已投票: ${score}`);
+      console.log(`Voted: ${score}`);
     } catch (error) {
-      console.error("投票失敗", error);
+      console.error("Vote failed", error);
     }
   };
 
   const handleLock = async () => {
     try {
       await lockVotes(realRoomId, name);
-      console.log("投票已鎖定");
+      console.log("Votes locked");
       navigate(`/room/${realRoomId}/result`);
     } catch (error) {
-      console.error("鎖定失敗", error);
-      alert("鎖定失敗，請重試！");
+      console.error("Failed to lock votes", error);
+      alert("Failed to lock votes, please try again!");
     }
   };
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-gray-100 p-4">
-      {/* Toast 複製成功提示 */}
+      {/* Toast for successful link copy */}
       {copied && (
         <div className="fixed top-5 right-5 bg-green-500 text-white py-2 px-4 rounded-lg shadow-lg animate-bounce">
-          ✅ 連結已複製！
+          ✅ Link copied!
         </div>
       )}
 
       <div className="bg-white p-6 rounded-2xl shadow-lg w-full max-w-md">
-        {/* 複製連結按鈕 */}
+        {/* Copy invite link button */}
         <div className="flex justify-end mb-4">
           <button
             onClick={() => {
@@ -125,17 +126,19 @@ function VotePage({ name, roomId, isHost }) {
                   setCopied(true);
                   setTimeout(() => setCopied(false), 2000);
                 })
-                .catch((err) => console.error("複製失敗", err));
+                .catch((err) => console.error("Failed to copy", err));
             }}
             className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-1 px-3 rounded-lg text-sm"
           >
-            複製邀請連結
+            🔗 Copy Invite Link
           </button>
         </div>
 
-        <h1 className="text-2xl font-bold mb-6 text-center">請選擇你的分數</h1>
+        <h1 className="text-2xl font-bold mb-6 text-center">
+          Select Your Score
+        </h1>
 
-        {/* 投票按鈕 */}
+        {/* Voting buttons */}
         <div className="flex flex-wrap justify-center gap-4 mb-6">
           {scores.map((score) => (
             <button
@@ -152,9 +155,9 @@ function VotePage({ name, roomId, isHost }) {
           ))}
         </div>
 
-        {/* 玩家列表 */}
+        {/* Player list */}
         <div className="mb-6">
-          <h2 className="text-lg font-semibold mb-2">目前玩家：</h2>
+          <h2 className="text-lg font-semibold mb-2">Current Players:</h2>
           <ul className="space-y-2">
             {players.map((player) => (
               <li
@@ -163,30 +166,30 @@ function VotePage({ name, roomId, isHost }) {
               >
                 <span>{player.name}</span>
                 <span className="font-bold">
-                  {!locked && player.score !== null ? "✅ OK" : ""}
+                  {!locked && player.score !== null ? "✅" : "👀"}
                 </span>
               </li>
             ))}
           </ul>
         </div>
 
-        {/* 平均分數 */}
+        {/* Average score */}
         {locked && (
           <div className="mt-6 text-center">
-            <h2 className="text-lg font-bold mb-2">平均分數</h2>
+            <h2 className="text-lg font-bold mb-2">Average Score</h2>
             <div className="text-3xl text-blue-500 font-extrabold">
-              {average !== null ? average.toFixed(2) : "尚未計算"}
+              {average !== null ? average.toFixed(2) : "Not calculated yet"}
             </div>
           </div>
         )}
 
-        {/* 房主送出按鈕 */}
+        {/* Host submit button */}
         {isHost && !locked && (
           <button
             onClick={handleLock}
             className="w-full bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded-lg transition-all mt-6"
           >
-            送出投票（房主專用）
+            Submit Votes (Host Only)
           </button>
         )}
       </div>

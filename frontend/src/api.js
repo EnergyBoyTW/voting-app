@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const BASE_URL = "http://localhost:8000"; // 根據你後端的實際網址修改
+const BASE_URL = "https://voting-app-lrrg.onrender.com"; // 根據你後端的實際網址修改
 
 // 建立房間（Create Room）
 export const createRoom = (hostName) => {

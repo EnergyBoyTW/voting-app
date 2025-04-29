@@ -13,36 +13,39 @@ function App() {
 
   return (
     <Routes>
-      {/* 首頁 */}
+      {/* Home Page */}
       <Route
         path="/"
         element={
           <div className="min-h-screen flex flex-col items-center justify-center bg-gray-100">
-            <h1 className="text-3xl font-bold mb-8">歡迎來到投票系統</h1>
+            <img src="/logo.png" alt="We Vote Logo" className="w-48 mb-6" />
+            <p className="text-gray-600 mb-8 text-center">
+              Create a room, invite your friends, and start voting together!
+            </p>
             <div className="flex gap-4">
               <button
                 onClick={() => (window.location.href = "/create")}
-                className="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-lg"
+                className="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-6 rounded-lg"
               >
-                建立房間
+                Create Room
               </button>
               <button
                 onClick={() => {
-                  const roomId = prompt("請輸入房號:");
+                  const roomId = prompt("Enter Room ID:");
                   if (roomId) {
                     window.location.href = `/room/${roomId}`;
                   }
                 }}
-                className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg"
+                className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-6 rounded-lg"
               >
-                加入房間
+                Join Room
               </button>
             </div>
           </div>
         }
       />
 
-      {/* 建立房間頁 */}
+      {/* Create Room Page */}
       <Route
         path="/create"
         element={
@@ -54,7 +57,7 @@ function App() {
         }
       />
 
-      {/* 加入房間頁 */}
+      {/* Join Room Page */}
       <Route
         path="/room/:roomId"
         element={
@@ -66,13 +69,13 @@ function App() {
         }
       />
 
-      {/* 投票頁 */}
+      {/* Vote Page */}
       <Route
         path="/room/:roomId/vote"
         element={<VotePage name={name} roomId={roomId} isHost={isHost} />}
       />
 
-      {/* 結果頁 */}
+      {/* Result Page */}
       <Route
         path="/room/:roomId/result"
         element={<ResultPage name={name} roomId={roomId} isHost={isHost} />}
