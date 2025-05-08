@@ -11,6 +11,7 @@ function ResultPage({ name, roomId, isHost }) {
   const realRoomId = roomId || urlRoomId;
   const socketRef = useRef(null);
   const reconnectTimer = useRef(null);
+  const isManualClose = useRef(false);
 
   const connectWebSocket = () => {
     const wsUrl = `wss://voting-app-lrrg.onrender.com/ws/${realRoomId}`;
@@ -40,18 +41,34 @@ function ResultPage({ name, roomId, isHost }) {
     };
 
     ws.onclose = () => {
-      console.warn("ResultPage WebSocket closed, retrying in 1 second...");
-      reconnectTimer.current = setTimeout(() => {
-        connectWebSocket();
-      }, 1000);
+      console.warn("ResultPage WebSocket closed");
+      if (!isManualClose.current) {
+        console.log("⚠️ Unexpected disconnect. Retrying...");
+        reconnectTimer.current = setTimeout(() => {
+          connectWebSocket();
+        }, 1000);
+      } else {
+        console.log("✅ Manual close, not retrying");
+      }
     };
+  };
+  const fetchResults = async () => {
+    try {
+      const response = await getResults(realRoomId);
+      setResults(response.data.results);
+      setAverage(response.data.average);
+    } catch (error) {
+      console.error("Failed to fetch results", error);
+    }
   };
 
   useEffect(() => {
     connectWebSocket();
+    fetchResults();
 
     return () => {
       console.log("Cleaning up ResultPage WebSocket connection");
+      isManualClose.current = true;
       if (socketRef.current) {
         socketRef.current.close();
         socketRef.current = null;
@@ -60,21 +77,7 @@ function ResultPage({ name, roomId, isHost }) {
         clearTimeout(reconnectTimer.current);
       }
     };
-  }, [realRoomId, navigate]);
-
-  useEffect(() => {
-    const fetchResults = async () => {
-      try {
-        const response = await getResults(realRoomId);
-        setResults(response.data.results);
-        setAverage(response.data.average);
-      } catch (error) {
-        console.error("Failed to fetch results", error);
-      }
-    };
-
-    fetchResults();
-  }, [realRoomId]);
+  }, []);
 
   const handleRestart = async () => {
     try {

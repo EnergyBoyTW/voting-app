@@ -31,7 +31,7 @@ class JoinRequest(BaseModel):
 class VoteRequest(BaseModel):
     roomId: str
     name: str
-    score: int
+    score: Optional[int]
 
 class LockRequest(BaseModel):
     roomId: str
@@ -86,10 +86,12 @@ async def vote_player(request: VoteRequest):
 
     rooms[room_id]["players"][name]["score"] = score
 
-    # ✅ 這行！投票完就廣播 refresh
     await broadcast_update(room_id)
 
-    return {"message": f"{name} 投了 {score} 分"}
+    if score is None:
+        return {"message": f"{name} 取消了投票"}
+    else:
+        return {"message": f"{name} 投了 {score} 分"}
 
 @app.post("/lock")
 async def lock_votes(request: LockRequest):
@@ -110,6 +112,7 @@ async def lock_votes(request: LockRequest):
 
 @app.get("/results")
 def get_results(roomId: Optional[str] = None):
+    getConnectionCountPerRoom()
     if roomId is None or roomId not in rooms:
         return {"message": "房間不存在！"}
 
@@ -154,6 +157,7 @@ async def websocket_endpoint(websocket: WebSocket, room_id: str):
             await websocket.receive_text()
     except WebSocketDisconnect:
         print(f"房間 {room_id} 有人斷線")
+        connected_rooms[room_id].remove(websocket)
     except Exception as e:
         print(f"WebSocket 其他錯誤：{e}")
 
@@ -166,3 +170,7 @@ async def broadcast_update(room_id: str, action: str = "refresh"):
             except Exception as e:
                 print(f"移除斷線WebSocket: {e}")
                 connected_rooms[room_id].remove(ws)  # 出錯就從 connected_rooms 裡面刪掉
+
+def getConnectionCountPerRoom():
+    for key in connected_rooms:
+        print(key, len(connected_rooms[key]))

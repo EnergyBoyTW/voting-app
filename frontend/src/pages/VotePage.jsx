@@ -13,11 +13,21 @@ function VotePage({ name, roomId, isHost }) {
   const realRoomId = roomId || urlRoomId;
   const socketRef = useRef(null);
   const reconnectTimer = useRef(null);
+  const isManualClose = useRef(false);
 
   const scores = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
 
   const connectWebSocket = () => {
+    if (
+      socketRef.current &&
+      socketRef.current.readyState !== WebSocket.CLOSED
+    ) {
+      console.log("WebSocket is already connected or connecting.");
+      return;
+    }
+
     const wsUrl = `wss://voting-app-lrrg.onrender.com/ws/${realRoomId}`;
+
     console.log("Attempting to establish WebSocket connection:", realRoomId);
     const ws = new WebSocket(wsUrl);
     socketRef.current = ws;
@@ -51,18 +61,23 @@ function VotePage({ name, roomId, isHost }) {
     };
 
     ws.onclose = () => {
-      console.warn("WebSocket connection closed, retrying in 1 second...");
-      reconnectTimer.current = setTimeout(() => {
-        connectWebSocket();
-      }, 1000);
+      console.warn("WebSocket closed");
+      if (!isManualClose.current) {
+        console.log("⚠️ Unexpected disconnect. Retrying...");
+        reconnectTimer.current = setTimeout(connectWebSocket, 1000);
+      } else {
+        console.log("✅ Manual close, no retry.");
+      }
     };
   };
 
   useEffect(() => {
+    isManualClose.current = false;
     connectWebSocket();
 
     return () => {
       console.log("Cleaning up WebSocket connection");
+      isManualClose.current = true;
       if (socketRef.current) {
         socketRef.current.close();
         socketRef.current = null;
@@ -85,12 +100,22 @@ function VotePage({ name, roomId, isHost }) {
   };
 
   const handleVote = async (score) => {
-    setSelectedScore(score);
-    try {
-      await vote(realRoomId, name, score);
-      console.log(`Voted: ${score}`);
-    } catch (error) {
-      console.error("Vote failed", error);
+    if (selectedScore === score) {
+      setSelectedScore(null);
+      try {
+        await vote(realRoomId, name, null);
+        console.log("Vote cleared");
+      } catch (error) {
+        console.error("Failed to clear vote", error);
+      }
+    } else {
+      setSelectedScore(score);
+      try {
+        await vote(realRoomId, name, score);
+        console.log(`Voted: ${score}`);
+      } catch (error) {
+        console.error("Vote failed", error);
+      }
     }
   };
 
